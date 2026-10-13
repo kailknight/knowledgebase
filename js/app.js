@@ -45,16 +45,58 @@
     FORBID_ATTR: ['style', 'class', 'id', 'width', 'height']
   });
 
-  // ---------- name & theme ----------
-  const getName = () => { try { return localStorage.getItem('kb_name') || ''; } catch { return ''; } };
-  function askName() {
-    const name = (prompt('Your name (shown on articles you add or edit):', getName()) || '').trim();
-    if (name) { try { localStorage.setItem('kb_name', name); } catch { /* storage blocked */ } }
-    renderName();
-    return getName();
+  // ---------- login & roles (shared with OnePopHealth) ----------
+  // Usernames and roles come from OnePopHealth's users.json. Admin, Approver and User can add and edit;
+  // only Admin can delete; View is read-only.
+  const PERMS = { edit: ['admin', 'approver', 'user'], delete: ['admin'] };
+  const readSession = () => { try { return JSON.parse(localStorage.getItem('kb_session')); } catch { return null; } };
+  let session = readSession();
+  const can = (perm) => !!session && PERMS[perm].includes(String(session.role).toLowerCase());
+
+  async function login(username) {
+    const res = await fetch(`${cfg.usersUrl}?t=${Date.now()}`, { cache: 'no-store' });
+    if (!res.ok) throw new Error(`couldn't load the user list (HTTP ${res.status})`);
+    const user = (await res.json()).find(u => u.username.toLowerCase() === username.trim().toLowerCase());
+    if (!user) throw new Error('unknown username — ask an OnePopHealth admin to add you');
+    session = { username: user.username, role: user.role };
+    try { localStorage.setItem('kb_session', JSON.stringify(session)); } catch { /* storage blocked */ }
   }
-  function renderName() { $('nameBtn').textContent = `👤 ${getName() || 'Set your name'}`; }
-  $('nameBtn').onclick = askName;
+  function logout() {
+    session = null;
+    try { localStorage.removeItem('kb_session'); } catch { /* storage blocked */ }
+    renderUser();
+    route();
+  }
+  function renderUser() {
+    $('userChip').hidden = !session;
+    $('logoutBtn').hidden = !session;
+    $('newBtn').hidden = !can('edit');
+    if (session) $('userChip').textContent = `👤 ${session.username} · ${session.role}`;
+  }
+  $('logoutBtn').onclick = logout;
+
+  function renderLogin() {
+    const user = el('input', { placeholder: 'Username', autocomplete: 'username', autofocus: '' });
+    const error = el('div', { class: 'login-error' });
+    const form = el('form', { class: 'login' }, [
+      el('h2', { text: 'Sign in' }),
+      el('p', { class: 'muted', text: 'Use your OnePopHealth username.' }),
+      user, error,
+      el('button', { class: 'btn btn-primary', type: 'submit', text: 'Continue' })
+    ]);
+    form.onsubmit = async (e) => {
+      e.preventDefault();
+      if (!user.value.trim()) return;
+      error.textContent = '';
+      try {
+        await login(user.value);
+        renderUser();
+        route();
+      } catch (err) { error.textContent = `✖ Can't sign in: ${err.message}.`; }
+    };
+    app.replaceChildren(form);
+    user.focus();
+  }
 
   function renderTheme() {
     const dark = document.documentElement.dataset.theme === 'dark';
@@ -104,8 +146,10 @@
     window.scrollTo(0, 0);
     const problem = configError();
     if (problem) return renderMessage(problem, true);
+    if (!session) return renderLogin();
     try {
       if (page === 'a' && id) await renderView(id);
+      else if ((page === 'edit' || page === 'new') && !can('edit')) renderMessage(`Your role (${session.role}) can view articles but not add or edit them.`, true);
       else if (page === 'edit' && id) await renderEditor(await getArticle(id));
       else if (page === 'new') await renderEditor(null);
       else await renderList();
@@ -187,8 +231,8 @@
       el('div', { class: 'article-actions' }, [
         el('a', { class: 'btn', href: '#/', text: '← All articles' }),
         el('span', { class: 'spacer' }),
-        el('a', { class: 'btn btn-primary', href: `#/edit/${a.id}`, text: '✏️ Edit' }),
-        del
+        can('edit') ? el('a', { class: 'btn btn-primary', href: `#/edit/${a.id}`, text: '✏️ Edit' }) : null,
+        can('delete') ? del : null
       ]),
       el('div', { class: 'card-cat', text: a.category || 'General' }),
       el('h1', { text: a.title }),
@@ -282,8 +326,7 @@
 
     const save = el('button', { class: 'btn btn-primary', type: 'button', text: editing ? 'Save changes' : 'Publish article' });
     save.onclick = async () => {
-      const name = getName() || askName();
-      if (!name) { status.textContent = 'Please set your name first.'; return; }
+      const name = session.username;
       if (!title.value.trim()) { status.textContent = 'Please add a title.'; title.focus(); return; }
       const content = clean(editor.innerHTML);
       // Plain-text copy for search/snippets; a space after each block so words don't run together.
@@ -383,7 +426,7 @@
   document.addEventListener('keydown', (e) => { if (e.key === 'Escape') $('lightbox').hidden = true; });
 
   window.addEventListener('hashchange', route);
-  renderName();
+  renderUser();
   renderTheme();
   route();
 })();

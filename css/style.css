@@ -144,3 +144,15 @@ input:focus, .editor:focus { outline: 2px solid var(--accent); outline-offset: -
   .article { padding: 18px; }
   .list-head { flex-direction: column; align-items: stretch; }
 }
+
+/* ---------- sign in (OnePopHealth usernames) ---------- */
+.user-chip { font-size: 13px; color: #d1d5db; }
+.login {
+  max-width: 380px; margin: 60px auto; background: var(--surface); border: 1px solid var(--border);
+  border-radius: 14px; padding: 28px; display: flex; flex-direction: column; gap: 12px; box-shadow: 0 10px 30px var(--shadow);
+}
+.login h2 { margin: 0; }
+.login p { margin: 0 0 4px; }
+.login .btn { justify-content: center; padding: 10px; }
+.login-error { color: #b91c1c; font-size: 14px; min-height: 1em; }
+:root[data-theme="dark"] .login-error { color: #fca5a5; }

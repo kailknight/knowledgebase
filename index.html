@@ -13,15 +13,16 @@
       document.documentElement.dataset.theme = t;
     })();
   </script>
-  <link rel="stylesheet" href="css/style.css?v=1">
+  <link rel="stylesheet" href="css/style.css?v=2">
 </head>
 <body>
   <header class="topbar">
     <div class="inner">
       <a class="brand" href="#/">📚 Knowledge Base</a>
-      <button class="btn btn-primary" id="newBtn" type="button">+ New article</button>
+      <button class="btn btn-primary" id="newBtn" type="button" hidden>+ New article</button>
       <span class="spacer"></span>
-      <button class="btn btn-ghost" id="nameBtn" type="button" title="Your name (shown on articles you add or edit)"></button>
+      <span class="user-chip" id="userChip" hidden></span>
+      <button class="btn btn-ghost" id="logoutBtn" type="button" hidden>Log out</button>
       <button class="btn btn-ghost" id="themeBtn" type="button"></button>
     </div>
   </header>
@@ -32,7 +33,7 @@
   <div class="toast" id="toast"></div>
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.1.6/purify.min.js"></script>
-  <script src="js/config.js?v=1"></script>
-  <script src="js/app.js?v=1"></script>
+  <script src="js/config.js?v=2"></script>
+  <script src="js/app.js?v=2"></script>
 </body>
 </html>

@@ -11,6 +11,8 @@ Articles are stored in Supabase (table `kb_articles`). Pictures are compressed i
    - `supabaseUrl`: Project Settings → Data API → Project URL
    - `supabaseAnonKey`: Project Settings → API Keys → Legacy → **anon public**
 
+   Only change the text between the quotes, and keep the `name: 'value',` format.
+
    Use the anon key only. **Never** use the `service_role` key, because this file is public.
 3. **Turn on GitHub Pages:** go to **Settings → Pages → Deploy from a branch → `main` / `(root)`**. The site is then at `https://kailknight.github.io/knowledgebase/`.
 
@@ -19,7 +21,10 @@ Articles are stored in Supabase (table `kb_articles`). Pictures are compressed i
 - **Search** covers titles, tags, categories and article text. Click a category chip to filter.
 - **+ New article:** title, category (it suggests existing ones), tags (comma separated) and the content.
 - **Toolbar:** bold, italic, underline, heading, sub-heading, bulleted and numbered lists, quote, code block, link, image and clear formatting. Text pasted from Word or Outlook keeps headings, lists and tables but drops its styling.
-- **Your name:** set it with 👤 in the top bar. It's shown as "updated by" on the articles you save.
+- **Sign in** with your **OnePopHealth username**. Users and roles are managed in OnePopHealth → Admin Dashboard → Users:
+  - **Admin**, **Approver** and **User** can add and edit articles.
+  - Only **Admin** can delete.
+  - **View** is read-only.
 - **Editing safety:**
   - If someone else saved the same article while you were editing, you're asked before it's overwritten.
   - Leaving the editor with unsaved changes asks first.
@@ -27,5 +32,5 @@ Articles are stored in Supabase (table `kb_articles`). Pictures are compressed i
 
 ## Notes
 
-- There's no login, so anyone with the link can add, edit or delete. Don't put passwords or other secrets in articles.
+- The login is username-only (like OnePopHealth), so roles are honour-system. Don't put passwords or other secrets in articles.
 - All content is cleaned with DOMPurify before it's saved and shown.

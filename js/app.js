@@ -61,11 +61,26 @@
     session = { username: user.username, role: user.role };
     try { localStorage.setItem('kb_session', JSON.stringify(session)); } catch { /* storage blocked */ }
   }
+  // ---------- single sign-on with OnePopHealth ----------
+  // OnePopHealth links carry "#sso=<token>" (base64url JSON { u: username, t: issued-at }); without a
+  // sign-in we send you to the OnePopHealth login, which brings you back here signed in.
+  const OPH_SITE = 'https://pophealth-odc.github.io/onepophealth/';
+  function takeSsoToken() {
+    const m = location.hash.match(/(?:^#|[&?])sso=([^&]+)/);
+    if (!m) return null;
+    const rest = location.hash.replace(/[&?]?sso=[^&]+/, '').replace(/^#$/, '');
+    history.replaceState(null, '', location.pathname + location.search + rest);
+    try {
+      const t = JSON.parse(atob(decodeURIComponent(m[1]).replace(/-/g, '+').replace(/_/g, '/')));
+      return t && t.u && Date.now() - t.t < 12 * 3600e3 ? t.u : null;
+    } catch { return null; }
+  }
+  const signInViaOnePopHealth = () => location.replace(`${OPH_SITE}index.html?next=${encodeURIComponent(location.href)}`);
+
   function logout() {
     session = null;
     try { localStorage.removeItem('kb_session'); } catch { /* storage blocked */ }
-    renderUser();
-    route();
+    location.href = `${OPH_SITE}index.html?logout=1`; // signs you out of OnePopHealth too
   }
   function renderUser() {
     $('userChip').hidden = !session;
@@ -74,29 +89,6 @@
     if (session) $('userChip').textContent = `👤 ${session.username} · ${session.role}`;
   }
   $('logoutBtn').onclick = logout;
-
-  function renderLogin() {
-    const user = el('input', { placeholder: 'Username', autocomplete: 'username', autofocus: '' });
-    const error = el('div', { class: 'login-error' });
-    const form = el('form', { class: 'login' }, [
-      el('h2', { text: 'Sign in' }),
-      el('p', { class: 'muted', text: 'Use your OnePopHealth username.' }),
-      user, error,
-      el('button', { class: 'btn btn-primary', type: 'submit', text: 'Continue' })
-    ]);
-    form.onsubmit = async (e) => {
-      e.preventDefault();
-      if (!user.value.trim()) return;
-      error.textContent = '';
-      try {
-        await login(user.value);
-        renderUser();
-        route();
-      } catch (err) { error.textContent = `✖ Can't sign in: ${err.message}.`; }
-    };
-    app.replaceChildren(form);
-    user.focus();
-  }
 
   function renderTheme() {
     const dark = document.documentElement.dataset.theme === 'dark';
@@ -146,7 +138,7 @@
     window.scrollTo(0, 0);
     const problem = configError();
     if (problem) return renderMessage(problem, true);
-    if (!session) return renderLogin();
+    if (!session) return signInViaOnePopHealth();
     try {
       if (page === 'a' && id) await renderView(id);
       else if ((page === 'edit' || page === 'new') && !can('edit')) renderMessage(`Your role (${session.role}) can view articles but not add or edit them.`, true);
@@ -426,7 +418,17 @@
   document.addEventListener('keydown', (e) => { if (e.key === 'Escape') $('lightbox').hidden = true; });
 
   window.addEventListener('hashchange', route);
-  renderUser();
   renderTheme();
-  route();
+  (async () => {
+    // Sign in from a OnePopHealth link, else re-check the saved user (picks up role changes / removals).
+    const name = takeSsoToken() || session?.username;
+    if (name) {
+      try { await login(name); } catch {
+        session = null;
+        try { localStorage.removeItem('kb_session'); } catch { /* storage blocked */ }
+      }
+    }
+    renderUser();
+    route();
+  })();
 })();
